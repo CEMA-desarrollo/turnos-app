@@ -11,10 +11,11 @@ interface TurnoCardProps {
     nota?: string | null
     compact?: boolean
     isNext?: boolean
+    estado?: string
     fisios: Fisio[]
 }
 
-export default function TurnoCard({ fecha, fisio1_id, fisio2_id, nota, compact, isNext, fisios }: TurnoCardProps) {
+export default function TurnoCard({ fecha, fisio1_id, fisio2_id, nota, estado, compact, isNext, fisios }: TurnoCardProps) {
     const fisio1 = getFisioById(fisios, fisio1_id)
     const fisio2 = getFisioById(fisios, fisio2_id)
     const date = parseISO(fecha)
@@ -41,8 +42,16 @@ export default function TurnoCard({ fecha, fisio1_id, fisio2_id, nota, compact, 
                         </div>
                     ))}
                     <div className="flex flex-col justify-center">
-                        <div className="text-sm font-medium text-white">{fisio1?.nombre.split(' ')[0]} & {fisio2?.nombre.split(' ')[0]}</div>
-                        {nota && <div className="text-xs text-amber-400">{nota}</div>}
+                        {estado === 'cancelado' ? (
+                            <div className="text-sm font-bold text-red-400 tracking-wider">CANCELADO</div>
+                        ) : fisio1 && fisio2 ? (
+                            <div className="text-sm font-medium text-white">{fisio1.nombre.split(' ')[0]} & {fisio2.nombre.split(' ')[0]}</div>
+                        ) : fisio1 || fisio2 ? (
+                            <div className="text-sm font-medium text-white">Solo {(fisio1 || fisio2)?.nombre.split(' ')[0]}</div>
+                        ) : (
+                            <div className="text-sm font-medium text-gray-400">Sin asignar</div>
+                        )}
+                        {nota && <div className={`text-xs ${estado === 'cancelado' ? 'text-red-300' : 'text-amber-400'}`}>{nota}</div>}
                     </div>
                 </div>
             </div>
@@ -64,24 +73,37 @@ export default function TurnoCard({ fecha, fisio1_id, fisio2_id, nota, compact, 
                     <div className="text-xs text-gray-500">{year}</div>
                 </div>
                 <div className="flex-1">
-                    <p className="text-xs text-gray-400 uppercase tracking-widest mb-3 font-medium">Fisioterapeutas</p>
-                    <div className="flex flex-col gap-2">
-                        {[fisio1, fisio2].map(f => f && (
-                            <div key={f.id} className="flex items-center gap-3">
-                                <div
-                                    className="avatar text-white shadow-lg"
-                                    style={{ background: f.color, boxShadow: `0 4px 12px ${f.color}40` }}
-                                >
-                                    {f.iniciales}
-                                </div>
-                                <span className="font-semibold text-white text-sm">{f.nombre}</span>
+                    {estado === 'cancelado' ? (
+                        <>
+                            <p className="text-xs text-red-400/80 uppercase tracking-widest mb-2 font-bold">Estado</p>
+                            <h3 className="text-xl font-black text-red-400 tracking-tight">SÁBADO CERRADO</h3>
+                            {nota && <p className="text-sm text-red-300 mt-1">{nota}</p>}
+                        </>
+                    ) : (
+                        <>
+                            <p className="text-xs text-gray-400 uppercase tracking-widest mb-3 font-medium">Fisioterapeutas</p>
+                            <div className="flex flex-col gap-2">
+                                {[fisio1, fisio2].map(f => f && (
+                                    <div key={f.id} className="flex items-center gap-3">
+                                        <div
+                                            className="avatar text-white shadow-lg"
+                                            style={{ background: f.color, boxShadow: `0 4px 12px ${f.color}40` }}
+                                        >
+                                            {f.iniciales}
+                                        </div>
+                                        <span className="font-semibold text-white text-sm">{f.nombre}</span>
+                                    </div>
+                                ))}
+                                {!fisio1 && !fisio2 && (
+                                    <span className="text-sm text-gray-500 italic">Por asignar</span>
+                                )}
                             </div>
-                        ))}
-                    </div>
-                    {nota && (
-                        <div className="mt-3 flex items-center gap-2 bg-amber-500/10 rounded-lg px-3 py-1.5">
-                            <span className="text-amber-400 text-xs">⚠️ {nota}</span>
-                        </div>
+                            {nota && (
+                                <div className="mt-3 flex items-center gap-2 bg-amber-500/10 rounded-lg px-3 py-1.5">
+                                    <span className="text-amber-400 text-xs">⚠️ {nota}</span>
+                                </div>
+                            )}
+                        </>
                     )}
                 </div>
             </div>

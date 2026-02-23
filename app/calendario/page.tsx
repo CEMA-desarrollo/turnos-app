@@ -12,6 +12,8 @@ interface Turno {
     fecha: string;
     fisio1_id: string;
     fisio2_id: string;
+    estado?: string;
+    nota?: string | null;
 }
 
 export default function CalendarioPage() {
@@ -171,7 +173,13 @@ export default function CalendarioPage() {
                                             ))}
                                         </div>
                                         <div className="text-sm text-gray-200">
-                                            {f1?.nombre.split(' ')[0]} & {f2?.nombre.split(' ')[0]}
+                                            {turno.estado === 'cancelado' ? (
+                                                <span className="text-red-400 font-semibold text-xs tracking-wider">CERRADO</span>
+                                            ) : f1 && f2 ? (
+                                                `${f1.nombre.split(' ')[0]} & ${f2.nombre.split(' ')[0]}`
+                                            ) : f1 || f2 ? (
+                                                `Solo ${(f1 || f2)?.nombre.split(' ')[0]}`
+                                            ) : 'Sin asignar'}
                                         </div>
                                     </div>
                                 )

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { nextSaturday } from 'date-fns'
 import { generarPlanificacion, getSabadosRestantes, getFisioById, type Fisio } from '@/lib/rotation'
 import { ChevronLeft, Save, X, AlertTriangle, RefreshCw, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
@@ -106,6 +107,77 @@ export default function PlanificacionPage() {
         setTimeout(() => setMsg(null), 4000)
     }
 
+    async function cancelarYDesplazar(turno: Turno) {
+        if (!confirm(`¿Estás seguro de cancelar este sábado (${turno.fecha}) y desplazar al equipo una semana en el futuro?`)) return
+        setSaving(true)
+        const supabase = createClient()
+
+        // Obtenemos todos los turnos >= a la fecha seleccionada
+        const { data: futuros } = await supabase
+            .from('turnos_sabado')
+            .select('*')
+            .gte('fecha', turno.fecha)
+            .order('fecha', { ascending: true })
+
+        if (!futuros || futuros.length === 0) {
+            setSaving(false)
+            return
+        }
+
+        const target = futuros[0]
+        const resto = futuros.slice(1)
+
+        let currentPair = { f1: target.fisio1_id, f2: target.fisio2_id, estado: target.estado }
+        const updates = []
+
+        // Target se cancela
+        updates.push({
+            id: target.id,
+            fecha: target.fecha,
+            fisio1_id: 'vacio',
+            fisio2_id: 'vacio',
+            estado: 'cancelado',
+            nota: 'Sábado Cancelado (Equipo desplazado)'
+        })
+
+        // Desplazamos a los demás
+        for (const t of resto) {
+            if (t.estado === 'cancelado') continue; // Saltamos sábados que ya estaban cancelados
+
+            const nextPair = { f1: t.fisio1_id, f2: t.fisio2_id, estado: t.estado }
+            updates.push({
+                id: t.id,
+                fecha: t.fecha,
+                fisio1_id: currentPair.f1,
+                fisio2_id: currentPair.f2,
+                estado: currentPair.estado,
+                nota: t.nota
+            })
+            currentPair = nextPair
+        }
+
+        // El último par desplazado genera un sábado adicional al final
+        const lastDate = futuros[futuros.length - 1].fecha
+        const nextSatDate = nextSaturday(new Date(lastDate + 'T12:00:00')).toISOString().split('T')[0]
+        updates.push({
+            fecha: nextSatDate,
+            fisio1_id: currentPair.f1,
+            fisio2_id: currentPair.f2,
+            estado: currentPair.estado,
+            nota: null
+        })
+
+        const { error } = await supabase.from('turnos_sabado').upsert(updates)
+        if (error) {
+            setMsg({ text: 'Error al desplazar: ' + error.message, type: 'err' })
+        } else {
+            setMsg({ text: 'Calendario desplazado correctamente', type: 'ok' })
+            setEditId(null)
+            loadTurnos()
+        }
+        setSaving(false)
+    }
+
     function startEdit(t: Turno) {
         setEditId(t.fecha)
         setEditData({ fisio1_id: t.fisio1_id, fisio2_id: t.fisio2_id, nota: t.nota || '' })
@@ -178,8 +250,16 @@ export default function PlanificacionPage() {
                                             ))}
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <div className="text-sm text-gray-200 truncate">{f1?.nombre.split(' ')[0]} & {f2?.nombre.split(' ')[0]}</div>
-                                            {t.nota && <div className="text-xs text-amber-400 truncate">{t.nota}</div>}
+                                            <div className="text-sm text-gray-200 truncate">
+                                                {t.estado === 'cancelado' ? (
+                                                    <span className="text-red-400 font-semibold">CERRADO / CANCELADO</span>
+                                                ) : f1 && f2 ? (
+                                                    `${f1.nombre.split(' ')[0]} & ${f2.nombre.split(' ')[0]}`
+                                                ) : f1 || f2 ? (
+                                                    `Solo ${(f1 || f2)?.nombre.split(' ')[0]}`
+                                                ) : 'Sin asignar'}
+                                            </div>
+                                            {t.nota && <div className={`text-xs truncate ${t.estado === 'cancelado' ? 'text-red-300' : 'text-amber-400'}`}>{t.nota}</div>}
                                         </div>
                                         {t.estado === 'modificado' && <span className="text-xs text-amber-400 flex-shrink-0">●</span>}
                                         <span className="text-gray-600 flex-shrink-0">›</span>
@@ -218,7 +298,7 @@ export default function PlanificacionPage() {
                                             </select>
                                         </div>
 
-                                        {editData.fisio1_id === editData.fisio2_id && (
+                                        {editData.fisio1_id === editData.fisio2_id && editData.fisio1_id !== 'vacio' && (
                                             <div className="flex items-center gap-2 bg-red-500/10 rounded-lg px-3 py-2">
                                                 <AlertTriangle size={14} className="text-red-400" />
                                                 <span className="text-xs text-red-300">Las dos fisios deben ser diferentes</span>
@@ -236,14 +316,27 @@ export default function PlanificacionPage() {
                                             />
                                         </div>
 
-                                        <button
-                                            onClick={() => saveTurno({ ...t, ...editData } as Turno)}
-                                            disabled={saving || editData.fisio1_id === editData.fisio2_id}
-                                            className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-semibold py-2.5 rounded-xl transition-all text-sm"
-                                        >
-                                            <Save size={16} />
-                                            {saving ? 'Guardando...' : 'Guardar cambio'}
-                                        </button>
+                                        <div className="flex gap-2 pt-2">
+                                            <button
+                                                onClick={() => saveTurno({ ...t, ...editData } as Turno)}
+                                                disabled={saving || (editData.fisio1_id === editData.fisio2_id && editData.fisio1_id !== 'vacio')}
+                                                className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-semibold py-2.5 rounded-xl transition-all text-sm"
+                                            >
+                                                <Save size={16} />
+                                                {saving ? 'Guardando...' : 'Guardar'}
+                                            </button>
+
+                                            {t.estado !== 'cancelado' && (
+                                                <button
+                                                    onClick={() => cancelarYDesplazar(t)}
+                                                    disabled={saving}
+                                                    className="flex items-center justify-center gap-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 font-semibold px-4 py-2.5 rounded-xl transition-all text-sm"
+                                                    title="Cancelar este sábado y empujar a todo el equipo al siguiente sábado"
+                                                >
+                                                    Desplazar
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
                                 )}
                             </div>

@@ -86,6 +86,7 @@ export default async function HomePage() {
               fisio1_id={proximo.fisio1_id}
               fisio2_id={proximo.fisio2_id}
               nota={(proximo as any).nota}
+              estado={(proximo as any).estado}
               fisios={fisios}
               isNext
             />
@@ -104,6 +105,7 @@ export default async function HomePage() {
                   fisio1_id={t.fisio1_id}
                   fisio2_id={t.fisio2_id}
                   nota={t.nota}
+                  estado={t.estado}
                   fisios={fisios}
                   compact
                 />
