@@ -18,16 +18,17 @@ export interface TurnoSabado {
 }
 
 /**
- * Obtiene todos los sábados desde hoy hasta el 31 de diciembre de 2026
+ * Obtiene todos los sábados del año 2026 (ancla fija)
+ * Esto garantiza que el índice de parejas no se desplace dependiendo del día en que se genere.
  */
-export function getSabadosRestantes(): Date[] {
-    const hoy = startOfDay(new Date())
+export function getAllSabados(): Date[] {
+    const inicio = new Date(2026, 0, 1) // 1 de Enero 2026
     const fin = new Date(2026, 11, 31) // 31 dic 2026
 
     const sabados: Date[] = []
-    let current = hoy
+    let current = inicio
 
-    // Si hoy es sábado, incluirlo, sino ir al próximo
+    // Si el inicio no es sábado, ir al próximo
     if (!isSaturday(current)) {
         current = nextSaturday(current)
     }
@@ -38,6 +39,14 @@ export function getSabadosRestantes(): Date[] {
     }
 
     return sabados
+}
+
+/**
+ * Filtra los sábados desde hoy en adelante (útil para la UI, no para la generación indexada)
+ */
+export function getSabadosRestantes(): Date[] {
+    const hoy = startOfDay(new Date())
+    return getAllSabados().filter(d => d >= hoy)
 }
 
 /**
@@ -69,14 +78,23 @@ export function generarParejas(fisios: Fisio[]): [string, string][] {
 }
 
 /**
- * Genera la planificación completa rotando cíclicamente las parejas
+ * Genera la planificación completa rotando cíclicamente las parejas.
+ * Utiliza el ancla de todo el año para mantener la paridad matemática intacta,
+ * de forma que el sábado X siempre reciba a la pareja Y sin importar qué día se ejecute.
  */
-export function generarPlanificacion(sabados: Date[], fisios: Fisio[]): TurnoSabado[] {
+export function generarPlanificacion(sabadosAsignar: Date[], fisios: Fisio[]): TurnoSabado[] {
     const parejas = generarParejas(fisios);
     if (parejas.length === 0) return [];
 
-    return sabados.map((fecha, index) => {
-        const pareja = parejas[index % parejas.length]
+    const anclaAnual = getAllSabados();
+
+    return sabadosAsignar.map(fecha => {
+        // Encontramos qué número de sábado del año es
+        const absoluteIndex = anclaAnual.findIndex(d => d.getTime() === fecha.getTime());
+        // Si por alguna razón no está (ej. año distinto), usamos 0, pero normalmente existirá.
+        const safeIndex = absoluteIndex >= 0 ? absoluteIndex : 0;
+
+        const pareja = parejas[safeIndex % parejas.length]
         return {
             fecha: fecha.toISOString().split('T')[0],
             fisio1_id: pareja[0],
