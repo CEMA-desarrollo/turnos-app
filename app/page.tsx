@@ -3,6 +3,7 @@ import { generarPlanificacion, getSabadosRestantes, contarTurnosPorFisio, type F
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 import TurnoCard from '@/components/TurnoCard'
+import { RealtimeListener } from '@/components/RealtimeListener'
 import BottomNav from '@/components/BottomNav'
 import Link from 'next/link'
 import { Settings } from 'lucide-react'
@@ -47,7 +48,8 @@ export default async function HomePage() {
   const siguientes = turnos.slice(1, 10)
 
   return (
-    <div className="gradient-bg min-h-screen pb-24">
+    <div className="gradient-bg min-h-screen text-white pb-safe">
+      <RealtimeListener />
       {/* Header */}
       <div className="sticky top-0 z-40 px-4 pt-safe" style={{ paddingTop: `max(env(safe-area-inset-top), 12px)` }}>
         <div className="flex items-center justify-between py-3">

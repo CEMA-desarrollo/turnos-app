@@ -7,6 +7,7 @@ import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, isSaturd
 import { es } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import BottomNav from '@/components/BottomNav'
+import { RealtimeListener } from '@/components/RealtimeListener'
 
 interface Turno {
     fecha: string;
@@ -61,7 +62,8 @@ export default function CalendarioPage() {
     const today = new Date().toISOString().split('T')[0]
 
     return (
-        <div className="gradient-bg min-h-screen pb-24">
+        <div className="gradient-bg min-h-screen text-white pb-safe">
+            <RealtimeListener />
             {/* Header */}
             <div className="sticky top-0 z-40 px-4" style={{ paddingTop: `max(env(safe-area-inset-top), 12px)` }}>
                 <div className="py-3">
