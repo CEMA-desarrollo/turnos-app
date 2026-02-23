@@ -94,15 +94,37 @@ export default function PlanificacionPage() {
         const sabados = getSabadosRestantes()
         const planificacion = generarPlanificacion(sabados, fisios)
 
+        if (sabados.length === 0) {
+            setSaving(false)
+            return
+        }
+
+        // Recuperamos los turnos futuros que ya existen en base de datos
+        const { data: existentes } = await supabase
+            .from('turnos_sabado')
+            .select('*')
+            .gte('fecha', sabados[0].toISOString().split('T')[0])
+
+        const mapaExistentes = new Map(existentes?.map(t => [t.fecha, t]) || [])
+
+        // Filtramos para NO pisar los sábados que el admin modificó a mano o canceló
+        const planificacionSegura = planificacion.filter(t => {
+            const turnoDB = mapaExistentes.get(t.fecha)
+            if (turnoDB && (turnoDB.estado === 'modificado' || turnoDB.estado === 'cancelado')) {
+                return false // Respetar y no sobreescribir
+            }
+            return true
+        })
+
         const { error } = await supabase.from('turnos_sabado').upsert(
-            planificacion.map(t => ({ ...t, estado: 'planificado' })),
+            planificacionSegura.map(t => ({ ...t, estado: 'planificado' })),
             { onConflict: 'fecha' }
         )
 
         if (error) {
             setMsg({ text: 'Error al generar: ' + error.message, type: 'err' })
         } else {
-            setMsg({ text: `✓ ${planificacion.length} sábados generados`, type: 'ok' })
+            setMsg({ text: `✓ ${planificacionSegura.length} sábados generados (Respetando modificaciones)`, type: 'ok' })
             loadTurnos()
         }
         setSaving(false)
