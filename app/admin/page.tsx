@@ -38,8 +38,8 @@ async function getData() {
 
 export default async function AdminDashboard() {
     const supabase = await createClient()
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) redirect('/admin/login')
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) redirect('/admin/login')
 
     const { turnos, fisios } = await getData()
     const conteos = contarTurnosPorFisio(turnos, fisios)
