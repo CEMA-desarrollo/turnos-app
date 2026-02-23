@@ -5,6 +5,7 @@ import { es } from 'date-fns/locale'
 import TurnoCard from '@/components/TurnoCard'
 import { RealtimeListener } from '@/components/RealtimeListener'
 import BottomNav from '@/components/BottomNav'
+import Header from '@/components/Header'
 import Link from 'next/link'
 import { Settings } from 'lucide-react'
 
@@ -50,18 +51,7 @@ export default async function HomePage() {
   return (
     <div className="gradient-bg min-h-screen text-white pb-safe">
       <RealtimeListener />
-      {/* Header */}
-      <div className="sticky top-0 z-40 px-4 pb-3 bg-black/40 backdrop-blur-xl border-b border-white/10" style={{ paddingTop: `max(env(safe-area-inset-top), 16px)` }}>
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-extrabold text-white tracking-tight">Turnos Sábados</h1>
-            <p className="text-xs text-gray-400">Fisioterapia</p>
-          </div>
-          <Link href="/admin/login" className="p-2.5 glass rounded-xl text-gray-400 hover:text-white transition-colors">
-            <Settings size={18} />
-          </Link>
-        </div>
-      </div>
+      <Header title="Turnos Sábados" subtitle="Fisioterapia" showSettings />
 
       <div className="px-4 pt-2 space-y-6 max-w-md mx-auto">
         {/* Team Banner */}

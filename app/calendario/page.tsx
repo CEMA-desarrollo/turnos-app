@@ -7,6 +7,7 @@ import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, isSaturd
 import { es } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import BottomNav from '@/components/BottomNav'
+import Header from '@/components/Header'
 import { RealtimeListener } from '@/components/RealtimeListener'
 
 interface Turno {
@@ -64,13 +65,7 @@ export default function CalendarioPage() {
     return (
         <div className="gradient-bg min-h-screen text-white pb-safe">
             <RealtimeListener />
-            {/* Header */}
-            <div className="sticky top-0 z-40 px-4" style={{ paddingTop: `max(env(safe-area-inset-top), 12px)` }}>
-                <div className="py-3">
-                    <h1 className="text-xl font-extrabold text-white tracking-tight">Calendario</h1>
-                    <p className="text-xs text-gray-400">Turnos sábados 2026</p>
-                </div>
-            </div>
+            <Header title="Calendario" subtitle="Turnos sábados 2026" />
 
             <div className="px-4 max-w-md mx-auto space-y-4">
                 {/* Month Navigator */}
