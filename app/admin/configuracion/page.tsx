@@ -14,7 +14,8 @@ export default function ConfiguracionPage() {
         setLoading(true)
         const supabase = createClient()
         const sabados = getSabadosRestantes()
-        const planificacion = generarPlanificacion(sabados)
+        const { data: fisios } = await supabase.from('fisioterapeutas').select('*').eq('activa', true)
+        const planificacion = generarPlanificacion(sabados, fisios || [])
 
         // Delete existing and reinsert
         const today = new Date().toISOString().split('T')[0]

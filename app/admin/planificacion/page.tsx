@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { FISIOS, generarPlanificacion, getSabadosRestantes, getFisioById } from '@/lib/rotation'
+import { generarPlanificacion, getSabadosRestantes, getFisioById, type Fisio } from '@/lib/rotation'
 import { ChevronLeft, Save, X, AlertTriangle, RefreshCw, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 
@@ -22,6 +22,7 @@ export default function PlanificacionPage() {
     const [editData, setEditData] = useState<Partial<Turno>>({})
     const [saving, setSaving] = useState(false)
     const [msg, setMsg] = useState<{ text: string; type: 'ok' | 'err' } | null>(null)
+    const [fisios, setFisios] = useState<Fisio[]>([])
 
     useEffect(() => {
         loadTurnos()
@@ -30,16 +31,20 @@ export default function PlanificacionPage() {
     async function loadTurnos() {
         setLoading(true)
         const supabase = createClient()
-        const { data } = await supabase
-            .from('turnos_sabado')
-            .select('*')
-            .order('fecha', { ascending: true })
 
-        if (data && data.length > 0) {
-            setTurnos(data)
+        const [turnosRes, fisiosRes] = await Promise.all([
+            supabase.from('turnos_sabado').select('*').order('fecha', { ascending: true }),
+            supabase.from('fisioterapeutas').select('*').order('created_at', { ascending: true })
+        ])
+
+        const currentFisios = fisiosRes.data || []
+        setFisios(currentFisios)
+
+        if (turnosRes.data && turnosRes.data.length > 0) {
+            setTurnos(turnosRes.data)
         } else {
             // No data in DB yet, show generated ones
-            const generated = generarPlanificacion(getSabadosRestantes())
+            const generated = generarPlanificacion(getSabadosRestantes(), currentFisios)
             setTurnos(generated)
         }
         setLoading(false)
@@ -84,7 +89,7 @@ export default function PlanificacionPage() {
         setSaving(true)
         const supabase = createClient()
         const sabados = getSabadosRestantes()
-        const planificacion = generarPlanificacion(sabados)
+        const planificacion = generarPlanificacion(sabados, fisios)
 
         const { error } = await supabase.from('turnos_sabado').upsert(
             planificacion.map(t => ({ ...t, estado: 'planificado' })),
@@ -111,7 +116,7 @@ export default function PlanificacionPage() {
         setEditData({})
     }
 
-    const fisioOptions = FISIOS.map(f => ({ value: f.id, label: f.nombre }))
+    const fisioOptions = [{ value: 'vacio', label: '-- Vacío (Ausencia) --' }, ...fisios.map(f => ({ value: f.id, label: f.nombre }))]
 
     return (
         <div className="min-h-screen bg-gray-950 pb-8">
@@ -148,8 +153,8 @@ export default function PlanificacionPage() {
                     <div className="text-center py-16 text-gray-500">Cargando...</div>
                 ) : (
                     turnos.map(t => {
-                        const f1 = getFisioById(t.fisio1_id)
-                        const f2 = getFisioById(t.fisio2_id)
+                        const f1 = getFisioById(fisios, t.fisio1_id)
+                        const f2 = getFisioById(fisios, t.fisio2_id)
                         const dateObj = new Date(t.fecha + 'T12:00:00')
                         const isEditing = editId === t.fecha
 

@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { generarPlanificacion, getSabadosRestantes, FISIOS, contarTurnosPorFisio } from '@/lib/rotation'
+import { generarPlanificacion, getSabadosRestantes, contarTurnosPorFisio, type Fisio } from '@/lib/rotation'
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 import TurnoCard from '@/components/TurnoCard'
@@ -7,25 +7,42 @@ import BottomNav from '@/components/BottomNav'
 import Link from 'next/link'
 import { Settings } from 'lucide-react'
 
-async function getTurnos() {
+async function getData() {
+  const supabase = await createClient()
+
+  // Fetch Fisios
+  const { data: fisiosData } = await supabase
+    .from('fisioterapeutas')
+    .select('*')
+    .order('created_at', { ascending: true })
+
+  const fisios = fisiosData || []
+
   try {
-    const supabase = await createClient()
-    const { data } = await supabase
+    const { data: turnosData } = await supabase
       .from('turnos_sabado')
       .select('*')
       .gte('fecha', new Date().toISOString().split('T')[0])
       .order('fecha', { ascending: true })
       .limit(20)
-    return data || []
+
+    const turnos = turnosData || []
+
+    if (turnos.length === 0) {
+      const sabados = getSabadosRestantes()
+      return { turnos: generarPlanificacion(sabados, fisios).slice(0, 20), fisios }
+    }
+
+    return { turnos, fisios }
   } catch {
     // Fallback: generate from algorithm if DB not set up yet
     const sabados = getSabadosRestantes()
-    return generarPlanificacion(sabados).slice(0, 20)
+    return { turnos: generarPlanificacion(sabados, fisios).slice(0, 20), fisios }
   }
 }
 
 export default async function HomePage() {
-  const turnos = await getTurnos()
+  const { turnos, fisios } = await getData()
   const proximo = turnos[0]
   const siguientes = turnos.slice(1, 10)
 
@@ -49,7 +66,7 @@ export default async function HomePage() {
         <div className="glass rounded-2xl p-4">
           <p className="text-xs text-gray-400 uppercase tracking-widest mb-3">Equipo</p>
           <div className="grid grid-cols-2 gap-2">
-            {FISIOS.map(f => (
+            {fisios.filter(f => f.activa).map(f => (
               <div key={f.id} className="flex items-center gap-2.5 bg-white/5 rounded-xl px-3 py-2">
                 <div className="avatar text-white text-xs" style={{ background: f.color, width: 32, height: 32, fontSize: '0.65rem' }}>
                   {f.iniciales}
@@ -69,6 +86,7 @@ export default async function HomePage() {
               fisio1_id={proximo.fisio1_id}
               fisio2_id={proximo.fisio2_id}
               nota={(proximo as any).nota}
+              fisios={fisios}
               isNext
             />
           </div>
@@ -86,6 +104,7 @@ export default async function HomePage() {
                   fisio1_id={t.fisio1_id}
                   fisio2_id={t.fisio2_id}
                   nota={t.nota}
+                  fisios={fisios}
                   compact
                 />
               ))}

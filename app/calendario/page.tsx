@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { FISIOS, PAREJAS, getFisioById } from '@/lib/rotation'
+import { getFisioById, type Fisio } from '@/lib/rotation'
 import { createClient } from '@/lib/supabase/client'
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, isSaturday, getDay } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -18,21 +18,24 @@ export default function CalendarioPage() {
     const [turnos, setTurnos] = useState<Turno[]>([])
     const [loading, setLoading] = useState(true)
 
+    const [fisios, setFisios] = useState<Fisio[]>([])
+
     useEffect(() => {
-        async function fetchTurnos() {
+        async function fetchData() {
             setLoading(true)
             const supabase = createClient()
-            const { data } = await supabase
-                .from('turnos_sabado')
-                .select('*')
-                .order('fecha', { ascending: true })
 
-            if (data) {
-                setTurnos(data)
-            }
+            const [turnosRes, fisiosRes] = await Promise.all([
+                supabase.from('turnos_sabado').select('*').order('fecha', { ascending: true }),
+                supabase.from('fisioterapeutas').select('*').order('created_at', { ascending: true })
+            ])
+
+            if (turnosRes.data) setTurnos(turnosRes.data)
+            if (fisiosRes.data) setFisios(fisiosRes.data)
+
             setLoading(false)
         }
-        fetchTurnos()
+        fetchData()
     }, [])
 
     const turnosByDate = Object.fromEntries(turnos.map(t => [t.fecha, t]))
@@ -110,7 +113,7 @@ export default function CalendarioPage() {
                                     {isSat && turno && (
                                         <div className="flex gap-0.5 mt-1">
                                             {[turno.fisio1_id, turno.fisio2_id].map(id => {
-                                                const f = getFisioById(id)
+                                                const f = getFisioById(fisios, id)
                                                 return f ? (
                                                     <div
                                                         key={id}
@@ -132,7 +135,7 @@ export default function CalendarioPage() {
                 <div className="glass rounded-xl p-3">
                     <p className="text-xs text-gray-400 uppercase tracking-widest mb-2">Fisioterapeutas</p>
                     <div className="grid grid-cols-2 gap-2">
-                        {FISIOS.map(f => (
+                        {fisios.filter(f => f.activa).map(f => (
                             <div key={f.id} className="flex items-center gap-2">
                                 <div className="rounded-full" style={{ background: f.color, width: 10, height: 10, flexShrink: 0 }} />
                                 <span className="text-xs text-gray-300">{f.nombre}</span>
@@ -153,8 +156,8 @@ export default function CalendarioPage() {
                                 const dateStr = format(d, 'yyyy-MM-dd')
                                 const turno = turnosByDate[dateStr]
                                 if (!turno) return null
-                                const f1 = getFisioById(turno.fisio1_id)
-                                const f2 = getFisioById(turno.fisio2_id)
+                                const f1 = getFisioById(fisios, turno.fisio1_id)
+                                const f2 = getFisioById(fisios, turno.fisio2_id)
                                 return (
                                     <div key={dateStr} className="glass card-hover rounded-xl p-3 flex items-center gap-3">
                                         <div className="text-center min-w-[36px]">

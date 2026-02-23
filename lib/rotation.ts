@@ -1,37 +1,21 @@
-import { eachWeekOfInterval, nextSaturday, isSaturday, addDays, startOfDay } from 'date-fns'
+import { nextSaturday, isSaturday, addDays, startOfDay } from 'date-fns'
 
 export interface Fisio {
     id: string
     nombre: string
     iniciales: string
     color: string
+    activa: boolean
 }
 
 export interface TurnoSabado {
+    id?: string
     fecha: string // ISO date string
     fisio1_id: string
     fisio2_id: string
+    estado?: string
+    nota?: string
 }
-
-// Las 4 fisioterapeutas con sus colores
-export const FISIOS: Fisio[] = [
-    { id: 'blanca', nombre: 'Blanca Antonelli', iniciales: 'BA', color: '#6366f1' },
-    { id: 'samantha', nombre: 'Samantha Pineda', iniciales: 'SP', color: '#ec4899' },
-    { id: 'mariana', nombre: 'Mariana Bravo', iniciales: 'MB', color: '#14b8a6' },
-    { id: 'betania', nombre: 'Betania Garcia', iniciales: 'BG', color: '#f59e0b' },
-]
-
-// 6 combinaciones únicas de parejas de 4 fisios
-export const PAREJAS: [string, string][] = [
-    // ── Fijas (coordinadas manualmente) ──────────────
-    ['mariana', 'betania'],   // 1: 21 Feb
-    ['blanca', 'samantha'],  // 2: 28 Feb
-    ['blanca', 'betania'],   // 3:  7 Mar
-    // ── Autogeneradas (ciclo equitativo) ─────────────
-    ['samantha', 'mariana'],   // 4: 14 Mar  ← iguala a todos en 2
-    ['samantha', 'betania'],   // 5: 21 Mar
-    ['blanca', 'mariana'],   // 6: 28 Mar  → ciclo completo, todos con 3
-]
 
 /**
  * Obtiene todos los sábados desde hoy hasta el 31 de diciembre de 2026
@@ -57,33 +41,64 @@ export function getSabadosRestantes(): Date[] {
 }
 
 /**
- * Genera la planificación completa rotando las 6 parejas cíclicamente
- * garantizando máxima equidad y rotación de parejas
+ * Genera combinaciones de parejas según las fisios activas
  */
-export function generarPlanificacion(sabados: Date[]): TurnoSabado[] {
+export function generarParejas(fisios: Fisio[]): [string, string][] {
+    const activas = fisios.filter(f => f.activa);
+
+    // Si hay exactamente 4 activas, mantenemos la lógica específica de equidad preaprobada
+    if (activas.length === 4) {
+        return [
+            [activas[2].id, activas[3].id],
+            [activas[0].id, activas[1].id],
+            [activas[0].id, activas[3].id],
+            [activas[1].id, activas[2].id],
+            [activas[1].id, activas[3].id],
+            [activas[0].id, activas[2].id],
+        ];
+    }
+
+    // Si no son 4, generamos todas las combinaciones posibles
+    const pairs: [string, string][] = [];
+    for (let i = 0; i < activas.length; i++) {
+        for (let j = i + 1; j < activas.length; j++) {
+            pairs.push([activas[i].id, activas[j].id]);
+        }
+    }
+    return pairs;
+}
+
+/**
+ * Genera la planificación completa rotando cíclicamente las parejas
+ */
+export function generarPlanificacion(sabados: Date[], fisios: Fisio[]): TurnoSabado[] {
+    const parejas = generarParejas(fisios);
+    if (parejas.length === 0) return [];
+
     return sabados.map((fecha, index) => {
-        const pareja = PAREJAS[index % PAREJAS.length]
+        const pareja = parejas[index % parejas.length]
         return {
             fecha: fecha.toISOString().split('T')[0],
             fisio1_id: pareja[0],
             fisio2_id: pareja[1],
+            estado: 'planificado'
         }
     })
 }
 
 /**
- * Cuenta los sábados trabajados por cada fisio
+ * Cuenta los sábados trabajados por cada fisio para la gráfica de equidad.
  */
-export function contarTurnosPorFisio(turnos: TurnoSabado[]): Record<string, number> {
+export function contarTurnosPorFisio(turnos: TurnoSabado[], fisios: Fisio[]): Record<string, number> {
     const conteo: Record<string, number> = {}
-    FISIOS.forEach(f => { conteo[f.id] = 0 })
+    fisios.forEach(f => { conteo[f.id] = 0 })
     turnos.forEach(t => {
-        conteo[t.fisio1_id] = (conteo[t.fisio1_id] || 0) + 1
-        conteo[t.fisio2_id] = (conteo[t.fisio2_id] || 0) + 1
+        if (t.fisio1_id && t.fisio1_id !== 'vacio' && t.estado !== 'cancelado') conteo[t.fisio1_id] = (conteo[t.fisio1_id] || 0) + 1
+        if (t.fisio2_id && t.fisio2_id !== 'vacio' && t.estado !== 'cancelado') conteo[t.fisio2_id] = (conteo[t.fisio2_id] || 0) + 1
     })
     return conteo
 }
 
-export function getFisioById(id: string): Fisio | undefined {
-    return FISIOS.find(f => f.id === id)
+export function getFisioById(fisios: Fisio[], id: string): Fisio | undefined {
+    return fisios.find(f => f.id === id)
 }

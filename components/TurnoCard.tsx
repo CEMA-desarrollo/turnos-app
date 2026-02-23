@@ -1,6 +1,6 @@
 'use client'
 
-import { FISIOS, getFisioById } from '@/lib/rotation'
+import { getFisioById, type Fisio } from '@/lib/rotation'
 import { format, parseISO, isToday } from 'date-fns'
 import { es } from 'date-fns/locale'
 
@@ -11,11 +11,12 @@ interface TurnoCardProps {
     nota?: string | null
     compact?: boolean
     isNext?: boolean
+    fisios: Fisio[]
 }
 
-export default function TurnoCard({ fecha, fisio1_id, fisio2_id, nota, compact, isNext }: TurnoCardProps) {
-    const fisio1 = getFisioById(fisio1_id)
-    const fisio2 = getFisioById(fisio2_id)
+export default function TurnoCard({ fecha, fisio1_id, fisio2_id, nota, compact, isNext, fisios }: TurnoCardProps) {
+    const fisio1 = getFisioById(fisios, fisio1_id)
+    const fisio2 = getFisioById(fisios, fisio2_id)
     const date = parseISO(fecha)
     const dayNum = format(date, 'd')
     const month = format(date, 'MMM', { locale: es })

@@ -1,20 +1,38 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { FISIOS, generarPlanificacion, getSabadosRestantes, contarTurnosPorFisio } from '@/lib/rotation'
+import { generarPlanificacion, getSabadosRestantes, contarTurnosPorFisio, type Fisio } from '@/lib/rotation'
 import Link from 'next/link'
 import { LogOut, CalendarDays, Users, Settings2 } from 'lucide-react'
 
-async function getStats() {
+async function getData() {
+    const supabase = await createClient()
+
+    // Fetch Fisios
+    const { data: fisiosData } = await supabase
+        .from('fisioterapeutas')
+        .select('*')
+        .order('created_at', { ascending: true })
+
+    const fisios = fisiosData || []
+
     try {
-        const supabase = await createClient()
-        const { data } = await supabase
+        const today = new Date().toISOString().split('T')[0]
+        const { data: turnosData } = await supabase
             .from('turnos_sabado')
             .select('*')
             .order('fecha', { ascending: true })
-        return data || []
+
+        const turnos = turnosData || []
+
+        if (turnos.length === 0) {
+            const sabados = getSabadosRestantes()
+            return { turnos: generarPlanificacion(sabados, fisios), fisios }
+        }
+
+        return { turnos, fisios }
     } catch {
         const sabados = getSabadosRestantes()
-        return generarPlanificacion(sabados)
+        return { turnos: generarPlanificacion(sabados, fisios), fisios }
     }
 }
 
@@ -23,8 +41,8 @@ export default async function AdminDashboard() {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) redirect('/admin/login')
 
-    const turnos = await getStats()
-    const conteos = contarTurnosPorFisio(turnos)
+    const { turnos, fisios } = await getData()
+    const conteos = contarTurnosPorFisio(turnos, fisios)
 
     const today = new Date().toISOString().split('T')[0]
     const turnosFuturos = turnos.filter(t => t.fecha >= today)
@@ -68,7 +86,7 @@ export default async function AdminDashboard() {
                 <div className="glass rounded-2xl p-4">
                     <p className="text-xs text-gray-400 uppercase tracking-widest mb-3">Turnos por fisio</p>
                     <div className="space-y-3">
-                        {FISIOS.map(f => {
+                        {fisios.filter(f => f.activa).map(f => {
                             const count = conteos[f.id] || 0
                             const max = Math.max(...Object.values(conteos))
                             const pct = max > 0 ? (count / max) * 100 : 0
