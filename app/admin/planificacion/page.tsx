@@ -30,11 +30,9 @@ export default function PlanificacionPage() {
     async function loadTurnos() {
         setLoading(true)
         const supabase = createClient()
-        const today = new Date().toISOString().split('T')[0]
         const { data } = await supabase
             .from('turnos_sabado')
             .select('*')
-            .gte('fecha', today)
             .order('fecha', { ascending: true })
 
         if (data && data.length > 0) {

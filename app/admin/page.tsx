@@ -7,11 +7,9 @@ import { LogOut, CalendarDays, Users, Settings2 } from 'lucide-react'
 async function getStats() {
     try {
         const supabase = await createClient()
-        const today = new Date().toISOString().split('T')[0]
         const { data } = await supabase
             .from('turnos_sabado')
             .select('*')
-            .gte('fecha', today)
             .order('fecha', { ascending: true })
         return data || []
     } catch {
@@ -27,7 +25,10 @@ export default async function AdminDashboard() {
 
     const turnos = await getStats()
     const conteos = contarTurnosPorFisio(turnos)
-    const proximo = turnos[0]
+
+    const today = new Date().toISOString().split('T')[0]
+    const turnosFuturos = turnos.filter(t => t.fecha >= today)
+    const proximo = turnosFuturos[0]
 
     return (
         <div className="gradient-bg min-h-screen">
@@ -51,7 +52,7 @@ export default async function AdminDashboard() {
                 <div className="grid grid-cols-2 gap-3">
                     <div className="glass rounded-2xl p-4">
                         <p className="text-xs text-gray-400 mb-1">Sábados restantes</p>
-                        <p className="text-3xl font-extrabold text-indigo-400">{turnos.length}</p>
+                        <p className="text-3xl font-extrabold text-indigo-400">{turnosFuturos.length}</p>
                     </div>
                     <div className="glass rounded-2xl p-4">
                         <p className="text-xs text-gray-400 mb-1">Próximo sábado</p>

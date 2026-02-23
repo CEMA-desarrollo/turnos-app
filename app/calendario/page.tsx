@@ -1,15 +1,41 @@
 'use client'
 
-import { useState } from 'react'
-import { FISIOS, PAREJAS, generarPlanificacion, getSabadosRestantes, getFisioById } from '@/lib/rotation'
+import { useState, useEffect } from 'react'
+import { FISIOS, PAREJAS, getFisioById } from '@/lib/rotation'
+import { createClient } from '@/lib/supabase/client'
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, isSaturday, getDay } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import BottomNav from '@/components/BottomNav'
 
+interface Turno {
+    fecha: string;
+    fisio1_id: string;
+    fisio2_id: string;
+}
+
 export default function CalendarioPage() {
-    const allTurnos = generarPlanificacion(getSabadosRestantes())
-    const turnosByDate = Object.fromEntries(allTurnos.map(t => [t.fecha, t]))
+    const [turnos, setTurnos] = useState<Turno[]>([])
+    const [loading, setLoading] = useState(true)
+
+    useEffect(() => {
+        async function fetchTurnos() {
+            setLoading(true)
+            const supabase = createClient()
+            const { data } = await supabase
+                .from('turnos_sabado')
+                .select('*')
+                .order('fecha', { ascending: true })
+
+            if (data) {
+                setTurnos(data)
+            }
+            setLoading(false)
+        }
+        fetchTurnos()
+    }, [])
+
+    const turnosByDate = Object.fromEntries(turnos.map(t => [t.fecha, t]))
 
     const [currentMonth, setCurrentMonth] = useState(() => {
         const now = new Date()
