@@ -91,10 +91,12 @@ export function generarPlanificacion(sabadosAsignar: Date[], fisios: Fisio[]): T
     return sabadosAsignar.map(fecha => {
         // Encontramos qué número de sábado del año es
         const absoluteIndex = anclaAnual.findIndex(d => d.getTime() === fecha.getTime());
-        // Si por alguna razón no está (ej. año distinto), usamos 0, pero normalmente existirá.
         const safeIndex = absoluteIndex >= 0 ? absoluteIndex : 0;
 
-        const pareja = parejas[safeIndex % parejas.length]
+        // Fase de ajuste (+5) para que el ciclo concuerde con la inercia manual que llevaban en la clínica
+        // El 21 de Feb (índice absoluto 7) al sumarle 5 se vuelve 12, que módulo 6 es 0 (Pareja 1)
+        const pareja = parejas[(safeIndex + 5) % parejas.length]
+
         return {
             fecha: fecha.toISOString().split('T')[0],
             fisio1_id: pareja[0],
