@@ -1,0 +1,16 @@
+Time: 2026-02-23T17:08:08.477Z | URL: /admin 
+Cookies: 
+User: undefined | Error: Auth session missing!
+
+Time: 2026-02-23T17:08:08.507Z | URL: /admin/login 
+Cookies: 
+User: undefined | Error: Auth session missing!
+
+Time: 2026-02-23T17:11:11.472Z | URL: / 
+Cookies: __next_hmr_refresh_hash__
+User: undefined | Error: Auth session missing!
+
+Time: 2026-02-23T17:11:11.817Z | URL: /manifest.json 
+Cookies: 
+User: undefined | Error: Auth session missing!
+

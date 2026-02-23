@@ -2,41 +2,22 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
 import { Lock, Mail, AlertCircle, Stethoscope } from 'lucide-react'
+import { loginAction } from './actions'
 
 export default function AdminLoginPage() {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
-    const router = useRouter()
 
-    useEffect(() => {
-        const checkUser = async () => {
-            const supabase = createClient()
-            const { data: { user } } = await supabase.auth.getUser()
-            if (user) {
-                router.push('/admin')
-            }
-        }
-        checkUser()
-    }, [router])
-
-    async function handleLogin(e: React.FormEvent) {
-        e.preventDefault()
+    async function handleAction(formData: FormData) {
         setLoading(true)
         setError('')
-
-        const supabase = createClient()
-        const { error: loginError } = await supabase.auth.signInWithPassword({ email, password })
-
-        if (loginError) {
-            setError('Credenciales incorrectas. Verifica tu email y contraseña.')
+        const result = await loginAction(formData)
+        if (result?.error) {
+            setError(result.error)
             setLoading(false)
-        } else {
-            router.push('/admin')
-            router.refresh()
         }
     }
 
@@ -53,13 +34,14 @@ export default function AdminLoginPage() {
                 </div>
 
                 {/* Form */}
-                <form onSubmit={handleLogin} className="glass rounded-2xl p-6 space-y-4">
+                <form action={handleAction} className="glass rounded-2xl p-6 space-y-4">
                     <div className="space-y-1.5">
                         <label className="text-xs text-gray-400 uppercase tracking-widest font-medium">Email</label>
                         <div className="relative">
                             <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" />
                             <input
                                 type="email"
+                                name="email"
                                 required
                                 value={email}
                                 onChange={e => setEmail(e.target.value)}
@@ -75,6 +57,7 @@ export default function AdminLoginPage() {
                             <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" />
                             <input
                                 type="password"
+                                name="password"
                                 required
                                 value={password}
                                 onChange={e => setPassword(e.target.value)}
