@@ -51,8 +51,8 @@ export default async function HomePage() {
     <div className="gradient-bg min-h-screen text-white pb-safe">
       <RealtimeListener />
       {/* Header */}
-      <div className="sticky top-0 z-40 px-4 pt-safe" style={{ paddingTop: `max(env(safe-area-inset-top), 12px)` }}>
-        <div className="flex items-center justify-between py-3">
+      <div className="sticky top-0 z-40 px-4 pb-3 bg-black/40 backdrop-blur-xl border-b border-white/10" style={{ paddingTop: `max(env(safe-area-inset-top), 16px)` }}>
+        <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-extrabold text-white tracking-tight">Turnos Sábados</h1>
             <p className="text-xs text-gray-400">Fisioterapia</p>
