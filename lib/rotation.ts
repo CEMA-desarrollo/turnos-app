@@ -74,7 +74,33 @@ export function generarParejas(fisios: Fisio[]): [string, string][] {
             pairs.push([activas[i].id, activas[j].id]);
         }
     }
-    return pairs;
+
+    // Para evitar que todas las combinaciones de la misma persona queden juntas (Ej: AB, AC, AD, AE)
+    // Aplicamos una intercalación matemática (stride) basándose en números primos relativos o simplemente
+    // saltando posiciones para distribuir la "carga" de manera más orgánica.
+    const spacedPairs: [string, string][] = [];
+    const total = pairs.length;
+    // Elegimos un salto que no sea múltiplo del total para garantizar recorrer todos los elementos
+    let salto = 3;
+    if (total % 3 === 0) salto = 2;
+    if (total % 2 === 0 && salto === 2) salto = 5;
+
+    let index = 0;
+    const used = new Set<number>();
+
+    while (spacedPairs.length < total) {
+        if (!used.has(index)) {
+            spacedPairs.push(pairs[index]);
+            used.add(index);
+        }
+        index = (index + salto) % total;
+        // Si regresamos a un índice ya usado por matemática cíclica, buscamos el siguiente libre
+        while (used.has(index) && spacedPairs.length < total) {
+            index = (index + 1) % total;
+        }
+    }
+
+    return spacedPairs;
 }
 
 /**
