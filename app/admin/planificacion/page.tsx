@@ -6,6 +6,7 @@ import { nextSaturday } from 'date-fns'
 import { generarPlanificacion, getSabadosRestantes, getFisioById, type Fisio } from '@/lib/rotation'
 import { ChevronLeft, Save, X, AlertTriangle, RefreshCw, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 interface Turno {
     id?: string
@@ -23,6 +24,7 @@ export default function PlanificacionPage() {
     const [editData, setEditData] = useState<Partial<Turno>>({})
     const [saving, setSaving] = useState(false)
     const [msg, setMsg] = useState<{ text: string; type: 'ok' | 'err' } | null>(null)
+    const router = useRouter()
     const [fisios, setFisios] = useState<Fisio[]>([])
 
     useEffect(() => {
@@ -171,9 +173,10 @@ export default function PlanificacionPage() {
         if (error) {
             setMsg({ text: 'Error al desplazar: ' + error.message, type: 'err' })
         } else {
-            setMsg({ text: 'Calendario desplazado correctamente', type: 'ok' })
+            setMsg({ text: 'Turno guardado, la página se actualizará pronto', type: 'ok' })
             setEditId(null)
             loadTurnos()
+            router.refresh()
         }
         setSaving(false)
     }

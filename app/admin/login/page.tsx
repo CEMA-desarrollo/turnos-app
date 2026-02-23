@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Lock, Mail, AlertCircle, Stethoscope } from 'lucide-react'
@@ -11,6 +11,17 @@ export default function AdminLoginPage() {
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
     const router = useRouter()
+
+    useEffect(() => {
+        const checkUser = async () => {
+            const supabase = createClient()
+            const { data: { user } } = await supabase.auth.getUser()
+            if (user) {
+                router.push('/admin')
+            }
+        }
+        checkUser()
+    }, [router])
 
     async function handleLogin(e: React.FormEvent) {
         e.preventDefault()

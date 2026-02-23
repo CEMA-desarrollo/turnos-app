@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { type Fisio } from '@/lib/rotation'
 import { ArrowLeft, UserCheck, UserX, Plus, Edit2, Save, X } from 'lucide-react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 export default function FisiosPage() {
     const [fisios, setFisios] = useState<Fisio[]>([])
@@ -13,6 +14,7 @@ export default function FisiosPage() {
     const [editData, setEditData] = useState<Partial<Fisio>>({})
     const [isCreating, setIsCreating] = useState(false)
     const [saving, setSaving] = useState(false)
+    const router = useRouter()
 
     useEffect(() => {
         loadFisios()
@@ -54,6 +56,7 @@ export default function FisiosPage() {
         setIsCreating(false)
         setEditData({})
         setSaving(false)
+        router.refresh()
     }
 
     function startEdit(f: Fisio) {
